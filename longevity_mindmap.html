@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Longevity Research Mindmap</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0a0e17;
+    color: #e0e6ed;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  #mindmap { width: 100%; height: 100%; }
+
+  svg { display: block; }
+
+  .node circle {
+    stroke-width: 2px;
+    cursor: pointer;
+    transition: r 0.2s;
+  }
+  .node circle:hover { filter: brightness(1.3); }
+
+  .node text {
+    font-size: 11px;
+    fill: #c8d0db;
+    pointer-events: none;
+    text-shadow: 0 0 4px #0a0e17, 0 0 8px #0a0e17;
+  }
+
+  .link {
+    fill: none;
+    stroke-opacity: 0.35;
+    stroke-width: 1.5px;
+  }
+
+  .tooltip {
+    position: absolute;
+    padding: 10px 14px;
+    background: rgba(16, 22, 36, 0.96);
+    border: 1px solid rgba(100, 140, 200, 0.3);
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.5;
+    max-width: 320px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 100;
+    color: #c8d0db;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .tooltip .tt-title {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .tooltip .tt-detail { opacity: 0.8; }
+
+  #legend {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(16, 22, 36, 0.92);
+    border: 1px solid rgba(100, 140, 200, 0.2);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 12px;
+    backdrop-filter: blur(8px);
+    z-index: 50;
+  }
+  #legend h3 {
+    font-size: 13px;
+    margin-bottom: 8px;
+    color: #8fa4c0;
+    font-weight: 600;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    margin: 4px 0;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  #controls {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    gap: 8px;
+    z-index: 50;
+  }
+  .ctrl-btn {
+    background: rgba(16, 22, 36, 0.9);
+    border: 1px solid rgba(100, 140, 200, 0.25);
+    color: #8fa4c0;
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+    backdrop-filter: blur(8px);
+  }
+  .ctrl-btn:hover {
+    background: rgba(30, 50, 80, 0.9);
+    color: #c8d0db;
+    border-color: rgba(100, 140, 200, 0.5);
+  }
+
+  #title {
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    z-index: 50;
+  }
+  #title h1 {
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  #title p {
+    font-size: 11px;
+    color: #6b7a8d;
+    margin-top: 2px;
+  }
+
+  #help {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    font-size: 11px;
+    color: #4a5568;
+    z-index: 50;
+    text-align: right;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div id="title">
+  <h1>Longevity Research Mindmap</h1>
+  <p>Interactive knowledge map &middot; 2023-2025 research landscape &middot; Click nodes to expand/collapse</p>
+</div>
+
+<div id="controls">
+  <button class="ctrl-btn" onclick="expandAll()">Expand All</button>
+  <button class="ctrl-btn" onclick="collapseAll()">Collapse All</button>
+  <button class="ctrl-btn" onclick="resetZoom()">Reset View</button>
+</div>
+
+<div id="mindmap"></div>
+
+<div id="legend">
+  <h3>Categories</h3>
+  <div class="legend-item"><span class="legend-dot" style="background:#f97316"></span>12 Hallmarks of Aging</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#22d3ee"></span>Therapeutic Interventions</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#a78bfa"></span>Biomarkers & Clocks</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#4ade80"></span>Industry & Investment</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#f472b6"></span>Clinical Trials</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#facc15"></span>Challenges & Future</div>
+</div>
+
+<div id="help">
+  Scroll to zoom &middot; Drag to pan<br>
+  Click nodes to expand/collapse
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const data = {
+  name: "Longevity\nResearch",
+  children: [
+    {
+      name: "12 Hallmarks\nof Aging",
+      color: "#f97316",
+      tip: "Lopez-Otin et al. 2023: Expanded from 9 to 12 hallmarks. Cell, 186(2), 243-278.",
+      children: [
+        { name: "Genomic\nInstability", tip: "Somatic mutations drive >50% of epigenetic age variation. SIRT6 overexpression extends lifespan. Harvard human DNA repair trials launched 2024.", children: [
+          { name: "CHIP", tip: "Clonal Hematopoiesis: DNMT3A, TET2, ASXL1 mutations. Linked to CV disease & cancer." },
+          { name: "DNA Repair\nEnhancement", tip: "Nature Reviews Drug Discovery 2025: PARP1 activators, XPC modulators, SIRT6 activators." },
+          { name: "cGAS-STING\nActivation", tip: "Cytosolic DNA from damage activates innate immune inflammation pathway." }
+        ]},
+        { name: "Telomere\nAttrition", tip: "TAC compound (2024): Screen of 650K+ compounds found TERT activator. Improved cognition in aged animals.", children: [
+          { name: "TAC Compound", tip: "Epigenetic de-repression of TERT gene. New neuron formation in aged hippocampus." },
+          { name: "TERT as TF", tip: "TERT acts as transcription factor: neurogenesis, Wnt signaling, anti-inflammatory programs." }
+        ]},
+        { name: "Epigenetic\nAlterations", tip: "OSK reprogramming: 109% median remaining lifespan extension in 124-week-old mice.", children: [
+          { name: "Partial\nReprogramming", tip: "AAV-OSK in aged mice: 109% lifespan extension. Altos Labs $3B, Retro Bio $1B." },
+          { name: "SB000 Target", tip: "Shift Bioscience (June 2025): Single-gene rejuvenation matching multi-factor effects." },
+          { name: "Chemical\nReprogramming", tip: "Small-molecule cocktails mimicking Yamanaka factors. Better dosing control & safety." }
+        ]},
+        { name: "Loss of\nProteostasis", tip: "AA-20 (PNAS 2025): Novel autophagy enhancer via TFEB without mTORC1 inhibition. Extended C. elegans lifespan.", children: [
+          { name: "TFEB\nActivation", tip: "Master regulator of lysosomal biogenesis. Nuclear translocation impaired with age." },
+          { name: "AA-20", tip: "PNAS 2025: mTORC1-independent autophagy enhancer. TFEB/HLH-30 dependent." }
+        ]},
+        { name: "Disabled\nMacroautophagy", tip: "New standalone hallmark in 2023. Autophagy decline enables damaged organelle accumulation.", children: [
+          { name: "Spermidine", tip: "Natural polyamine. Autophagy via eIF5A hypusination. Reduced CV mortality in observational studies." },
+          { name: "Trehalose", tip: "Disaccharide autophagy inducer via TFEB. Early clinical trials for Alzheimer's." }
+        ]},
+        { name: "Deregulated\nNutrient-Sensing", tip: "PEARL Trial completed: Rapamycin 48 weeks in 114 adults. Rapamycin+acarbose: 36.6% lifespan in mice.", children: [
+          { name: "mTOR/\nRapamycin", tip: "PEARL: Safe, improved lean mass (women 10mg), well-being (5mg). Note: 1/3 bioavailability." },
+          { name: "AMPK/\nMetformin", tip: "TAME trial: 3000 adults, 6 years, $45-70M needed. ARPA-H now handling coordination." },
+          { name: "Sirtuins/\nNAD+", tip: "NAD+ declines ~50% between ages 40-60. NR/NMN raise NAD+ but clinical benefits inconsistent." }
+        ]},
+        { name: "Mitochondrial\nDysfunction", tip: "Urolithin A: 25+ trials, 12% muscle strength gain. Elamipretide FDA approved Sept 2025.", children: [
+          { name: "Urolithin A", tip: "MitoImmune 2025: Expanded naive CD8+ T cells. CLARITY: 650 participants, brain health, March 2026." },
+          { name: "Elamipretide", tip: "FORZINITY: FDA approved Sept 2025 for Barth syndrome. Cardiolipin stabilization." }
+        ]},
+        { name: "Cellular\nSenescence", tip: "30+ clinical trials. D+Q, fisetin, UBX1325, navitoclax, RLS-1496, CAR T cells.", children: [
+          { name: "Senolytics", tip: "D+Q: STAMINA safe in MCI. Fisetin: 64% long-COVID relief (536 pts). 30+ trials ongoing." },
+          { name: "Senomorphics", tip: "Rapamycin: Suppresses SASP via mTOR. Does not kill senescent cells." },
+          { name: "Senoblockers", tip: "Dorian Therapeutics: Prevent senescence entry + reactivate regeneration. Novel dual-function." }
+        ]},
+        { name: "Stem Cell\nExhaustion", tip: "Cell 2025: Senescence-resistant cells (SRCs) in macaques improved cognition, bone density. No adverse effects.", children: [
+          { name: "SRC Therapy", tip: "Engineered senescence-resistant cells delivered IV to aged macaques. Systemic rejuvenation." },
+          { name: "RJB-0402", tip: "Rejuvenate Bio: $4M CIRM grant (July 2024). Multi-pathway gene therapy for stem cells." }
+        ]},
+        { name: "Altered\nCommunication", tip: "Heterochronic parabiosis: Young blood vs dilution debate. Alkahest, Elevian, GDF11.", children: [
+          { name: "Plasma\nDilution", tip: "Conboy hypothesis: Benefits from removing aged factors, not adding young ones." },
+          { name: "GDF11", tip: "Elevian: Attenuates knee degeneration. Controversy: may hinder muscle regeneration." }
+        ]},
+        { name: "Chronic\nInflammation", tip: "cGAS-STING central driver. GLP-1s: PhenoAge -4.9y, GrimAge -3.1y. H-151 improves aged mice.", children: [
+          { name: "cGAS-STING", tip: "Nature 2023 + PNAS 2025: Noncanonical pathway drives aging. H-151 reverses decline." },
+          { name: "GLP-1\nAgonists", tip: "Semaglutide: Epigenetic age reversal in HIV. EVOKE trials for Alzheimer's. Nature Biotech 2025." }
+        ]},
+        { name: "Dysbiosis", tip: "New hallmark 2023. Centenarians show increased diversity. Mediterranean diet preserves microbiome.", children: [
+          { name: "Centenarian\nMicrobiome", tip: "Unique secondary bile acids with antimicrobial properties. Elevated beneficial taxa." },
+          { name: "FMT", tip: "Young-to-old fecal transplant: Reverses gut barrier dysfunction, reduces inflammation, improves cognition in mice." }
+        ]}
+      ]
+    },
+    {
+      name: "Therapeutic\nInterventions",
+      color: "#22d3ee",
+      tip: "8 major intervention categories spanning senolytics, mTOR, NAD+, GLP-1, reprogramming, mitochondrial, gene therapy, and emerging compounds.",
+      children: [
+        { name: "Senolytics", tip: "30+ clinical trials. Clear senescent cells via targeting anti-apoptotic pathways (SCAPs).", children: [
+          { name: "D+Q", tip: "Dasatinib+Quercetin: Tyrosine kinase + PI3K. Hit-and-run dosing. ~36% remaining lifespan in mice." },
+          { name: "Fisetin", tip: "Most potent senolytic flavonoid. 64% long-COVID relief. TROFFi, STOP-Sepsis trials active." },
+          { name: "UBX1325", tip: "BCL-xL inhibitor, intravitreal. ASPIRE: +5.6 letters at 48 weeks. Published NEJM Evidence." },
+          { name: "Navitoclax", tip: "Potent BH3 mimetic. Topical approach (Dec 2024) avoids thrombocytopenia." },
+          { name: "RLS-1496", tip: "Rubedo: GPX4 modulator. FDA IND Sept 2025 (actinic keratosis). EMA trial May 2025." },
+          { name: "CAR T Cells", tip: "uPAR-targeting CAR T: One-and-done senolytic. Prophylactic efficacy in mice." }
+        ]},
+        { name: "mTOR\nInhibitors", tip: "Most replicated pharmacological lifespan extension. Rapamycin, everolimus, acarbose combos.", children: [
+          { name: "Rapamycin", tip: "PEARL: 48wk RCT, 114 adults. ITP: +9-26% lifespan. Combo with acarbose: +36.6%." },
+          { name: "Everolimus", tip: "Mannick 2014: +20% vaccine titers in elderly. EVERLAST trial ongoing (late 2026)." },
+          { name: "Rapa +\nAcarbose", tip: "NIA ITP: 36.6% median lifespan extension in mice. Largest pharmacological extension." }
+        ]},
+        { name: "NAD+\nPrecursors", tip: "NAD+ declines ~50% age 40-60. NR/NMN reliably raise NAD+ but clinical benefits inconsistent.", children: [
+          { name: "NMN", tip: "Improved walking speed, sleep quality (n=60, 12wk). Meta-analysis: minimal muscle benefits." },
+          { name: "NR", tip: "Reduced epigenetic age (PhenoAge, GrimAge). Long-COVID benefits. But no cognition improvement." },
+          { name: "CD38\nInhibitors", tip: "CD38 is primary NADase. 78c reverses NAD+ decline in mice. Upstream of NR/NMN." }
+        ]},
+        { name: "GLP-1\nAgonists", tip: "Nature Biotech 2025: 'Are GLP-1s the first longevity drugs?' Multi-system anti-aging effects.", children: [
+          { name: "Semaglutide", tip: "Epigenetic reversal: GrimAge -3.1y, PhenoAge -4.9y, DunedinPACE -9%. MACE reduction." },
+          { name: "Tirzepatide", tip: "Dual GIP/GLP-1 agonist. Broader metabolic effects. CV data accumulating." },
+          { name: "EVOKE\nTrials", tip: "Novo Nordisk Phase 3: Oral semaglutide for early Alzheimer's. Major test of metabolic-neuro link." }
+        ]},
+        { name: "Epigenetic\nReprogramming", tip: "OSK: 109% remaining lifespan extension. $4B+ invested across Altos, Retro, NewLimit, Turn Bio.", children: [
+          { name: "Yamanaka\nFactors", tip: "OSK (no Myc): 109% lifespan in 124-week mice. Cancer risk is primary concern." },
+          { name: "Chemical\nReprogramming", tip: "Small molecules mimicking OSKM. Better pharmacokinetics and safety. Under active development." },
+          { name: "mRNA\nDelivery", tip: "Turn Bio ERA platform: Transient expression via mRNA-LNP. HanAll $300M deal." }
+        ]},
+        { name: "Mitochondrial\nTherapies", tip: "Mitophagy enhancement (Urolithin A) + membrane stabilization (Elamipretide).", children: [
+          { name: "Urolithin A\n(Mitopure)", tip: "25+ trials. 12% muscle strength. MitoImmune: immune rejuvenation. CLARITY: 650 pts." },
+          { name: "Elamipretide\n(SS-31)", tip: "FDA approved Sept 2025 (Barth). Cardiolipin binding stabilizes cristae and OXPHOS." },
+          { name: "NAD+\nRepletion", tip: "NMN/NR restore NAD+/NADH ratio. Fuel sirtuin-dependent repair and mitophagy." }
+        ]},
+        { name: "Gene\nTherapy", tip: "Klotho: +19.7% lifespan. Follistatin: ~30% lifespan. SIRT6: +30%. TERT: extends without cancer.", children: [
+          { name: "Klotho", tip: "AAV-Klotho: +19.7% mouse lifespan. Anti-inflammatory, neuroprotective. 3 new patents." },
+          { name: "Follistatin", tip: "Intranasal AAV: ~30% mouse lifespan extension. Myostatin antagonist. Synergy with Klotho." },
+          { name: "SIRT6", tip: "+30% lifespan (both sexes). DNA repair, glucose homeostasis, inflammation. GF-1002 variant." },
+          { name: "TERT", tip: "Blasco lab: AAV-TERT extends lifespan WITHOUT increased cancer. TAC compound: neurogenesis." }
+        ]},
+        { name: "Emerging\nCompounds", tip: "Taurine, GlyNAC, AKG, spermidine: accessible compounds with growing evidence.", children: [
+          { name: "Taurine", tip: "Science 2023: +10-25% lifespan. Reduces senescence, protects telomerase, mitochondria." },
+          { name: "GlyNAC", tip: "Glycine+NAC: Restores glutathione. Reverses multiple aging hallmarks. Benefits reverse on cessation." },
+          { name: "AKG", tip: "Ca-AKG: Reduced bio-age by 8 years in 7 months. ABLE trial: 120 adults, Singapore." },
+          { name: "Spermidine", tip: "Potent autophagy inducer. POLYCAD: 187 CAD patients. Mixed cognitive results." }
+        ]}
+      ]
+    },
+    {
+      name: "Biomarkers\n& Clocks",
+      color: "#a78bfa",
+      tip: "Epigenetic, proteomic, glycomic, and functional biomarkers. DunedinPACE emerging as preferred trial endpoint.",
+      children: [
+        { name: "1st Gen\nClocks", tip: "Trained to predict chronological age. Moderate mortality prediction.", children: [
+          { name: "Horvath\n(2013)", tip: "353 CpGs, multi-tissue. MAE ~3.6 years. Most cited clock. $200-500." },
+          { name: "Hannum\n(2013)", tip: "71 CpGs, blood-only. MAE ~4.9 years. Simpler model than Horvath." }
+        ]},
+        { name: "2nd Gen\nClocks", tip: "Trained on mortality/phenotypic data. Strong mortality prediction.", children: [
+          { name: "PhenoAge\n(2018)", tip: "Levine clock. 513 CpGs + 9 clinical biomarkers. Strong mortality predictor." },
+          { name: "GrimAge\n(2019)", tip: "1030 CpGs. Strongest mortality predictor. Surrogates for 7 plasma proteins + smoking." }
+        ]},
+        { name: "3rd Gen\nClocks", tip: "Measures RATE of aging, not cumulative age. Most sensitive to interventions.", children: [
+          { name: "DunedinPACE\n(2022)", tip: "173 CpGs. Pace of aging (1.0 = normal). Best intervention sensitivity. CALERIE validated." }
+        ]},
+        { name: "Proteomic\nClocks", tip: "SomaScan platform: 3000-5000 proteins. Organ-specific aging signatures.", children: [
+          { name: "Organ-Specific\n(Oh 2023)", tip: "11 organ clocks from plasma. 1 in 5 adults 50+ has accelerated organ aging. Nature 2023." },
+          { name: "GDF-15", tip: "Strongest single protein mortality predictor. Rises 2-5x from age 30-80. $50-200 test." }
+        ]},
+        { name: "Commercial\nTests", tip: "Consumer-accessible biological age testing. $200-$500 range.", children: [
+          { name: "TruDiagnostic", tip: "TruAge: Most comprehensive panel. DunedinPACE + GrimAge2 + OMICmAge. $229-$499." },
+          { name: "Elysium\nIndex", tip: "Saliva-based. $299. Leonard Guarente (MIT). Paired with Basis supplement." },
+          { name: "Tally Health", tip: "David Sinclair. Cheek swab. $229. CheekAge algorithm. Subscription model." },
+          { name: "GlycanAge", tip: "IgG glycan patterns. Inflammatory/immune aging. $299-399. 200+ publications." }
+        ]},
+        { name: "Functional\nMeasures", tip: "Clinical assessments: free, validated, strong mortality prediction.", children: [
+          { name: "Gait Speed", tip: "The 'sixth vital sign'. <0.8 m/s = high risk. Each +0.1 m/s = 12% reduced mortality." },
+          { name: "Grip\nStrength", tip: "Each -5 kg = 15-20% increased mortality. $25-50 dynamometer." },
+          { name: "Frailty\nIndex", tip: "Fried: 5 criteria. Rockwood: 30-70 deficits. Very strong mortality predictor. Free." }
+        ]}
+      ]
+    },
+    {
+      name: "Industry &\nInvestment",
+      color: "#4ade80",
+      tip: "$8.49B+ invested. 25+ companies. Convergence on reprogramming, AI, and ocular first targets.",
+      children: [
+        { name: "Reprogramming\nCompanies", tip: "6+ companies. $4B+ total funding. Altos, Retro, NewLimit, Turn Bio, Life Bio, Shift Bio.", children: [
+          { name: "Altos Labs\n($3B)", tip: "Largest biotech launch ever. Bezos/Milner backed. Human safety testing Aug 2025." },
+          { name: "Retro Bio\n($1B)", tip: "Sam Altman backed. 3 pillars: reprogramming + autophagy + plasma. Australia trial 2025." },
+          { name: "NewLimit\n($105M)", tip: "Brian Armstrong (Coinbase). Epigenetic reprogramming focus." },
+          { name: "Turn Bio", tip: "ERA mRNA platform. HanAll $300M deal. TRN-001 clinical 2026." }
+        ]},
+        { name: "Senescence\nCompanies", tip: "Unity, Rubedo, Dorian, Oisin. Clinical-stage programs.", children: [
+          { name: "Unity Biotech\n($55M)", tip: "ASPIRE: +5.6 letters DME. NEJM Evidence. $55M Series C 2024." },
+          { name: "Rubedo\n($40M)", tip: "RLS-1496 GPX4 modulator. FDA IND Sept 2025. EMA trial May 2025." },
+          { name: "Dorian", tip: "Novel senoblockers: prevent senescence + reactivate regeneration." }
+        ]},
+        { name: "Pharma\nPartnerships", tip: "Major pharma entering longevity: AbbVie, Novartis, Eli Lilly, Sanofi.", children: [
+          { name: "AbbVie-Calico\n($1.5B+)", tip: "Multi-year collaboration on neurodegeneration and cancer." },
+          { name: "Novartis-\nBioAge", tip: "Dec 2024: Aging and exercise physiology collaboration." },
+          { name: "Lilly-BioAge\n+Insilico", tip: "Jan 2025: Metabolic aging. Lilly planning TAME-like GLP-1 study." }
+        ]},
+        { name: "AI &\nDiagnostics", tip: "Insilico Medicine, Deep Longevity, Gero AI, TruDiagnostic, Shift Bio.", children: [
+          { name: "Insilico\nMedicine", tip: "20 preclinical candidates, 100% IND success. ISM001-055 positive Phase IIa (IPF)." },
+          { name: "Deep\nLongevity", tip: "AI aging clocks. Aging.ai platform. Multi-omic integration." },
+          { name: "Gero AI", tip: "GeroSense: Biological age from wearable/step data. Outperforms prior models." }
+        ]},
+        { name: "Mitochondrial\n& Metabolic", tip: "Amazentis/Timeline (Urolithin A), Stealth BioTherapeutics (Elamipretide).", children: [
+          { name: "Amazentis\n($50M+ R&D)", tip: "Urolithin A (Mitopure). 25 trials, 80+ patents. Nature Aging 2025 pub." },
+          { name: "Stealth Bio", tip: "Elamipretide FORZINITY FDA approved Sept 2025. First mito-targeting peptide." }
+        ]},
+        { name: "Veterinary\nLongevity", tip: "Loyal: First-ever FDA lifespan-extension drug pathway (dogs).", children: [
+          { name: "Loyal", tip: "LOY-002: 1000+ dogs, 70 sites. Largest vet trial ever. XCA expected end 2025." }
+        ]}
+      ]
+    },
+    {
+      name: "Clinical\nTrials",
+      color: "#f472b6",
+      tip: "33+ registered trials across 11 intervention classes. Senolytics dominate (36% of pipeline).",
+      children: [
+        { name: "Landmark\nResults", tip: "Key completed trials with significant findings.", children: [
+          { name: "PEARL\n(Rapamycin)", tip: "NCT04488601. 48wk, 114 adults. Safe. Lean mass (women 10mg). Well-being (5mg). PMC12074816." },
+          { name: "ASPIRE\n(UBX1325)", tip: "Phase 2b DME. +5.6 ETDRS letters at 48wk from single injection. NEJM Evidence." },
+          { name: "MitoImmune\n(Urolithin A)", tip: "50 adults, 4wk. Expanded naive CD8+ T cells. Nature Aging 2025." },
+          { name: "Mannick\n(Everolimus)", tip: "218 elderly. +20% vaccine response. PD-1+ T cells reduced. Sci Transl Med 2014." }
+        ]},
+        { name: "Ongoing\nMajor Trials", tip: "Large-scale trials currently active or recruiting.", children: [
+          { name: "TAME\n(Metformin)", tip: "3000 adults, 6 years, 14 centers. First FDA 'aging' indication. $45-70M needed." },
+          { name: "CLARITY\n(Urolithin A)", tip: "650 participants. Brain health. Completion expected March 2026." },
+          { name: "EVOKE\n(Semaglutide)", tip: "Novo Nordisk Phase 3. Oral semaglutide for early Alzheimer's." },
+          { name: "STOP-Sepsis\n(Fisetin)", tip: "220 elderly sepsis patients. One of the largest senolytic trials." },
+          { name: "EVERLAST\n(Everolimus)", tip: "NCT05835999. Low-dose in older adults. Completion late 2026." }
+        ]},
+        { name: "Senolytic\nTrials", tip: "12 of 33 trials (36%). D+Q, fisetin, UBX1325, RLS-1496.", children: [
+          { name: "SToMP-AD", tip: "NCT04685590. D+Q for Alzheimer's. Wake Forest. Phase 2. Active." },
+          { name: "TROFFi", tip: "Fisetin Phase 2 in frail breast cancer survivors. ASCO 2024." },
+          { name: "Rubedo AK", tip: "RLS-1496 Phase 1b/2a. FDA IND cleared Sept 2025. Actinic keratosis." },
+          { name: "Fisetin\nPilot", tip: "NCT06431932. Healthy volunteers. Safety & senolytic pharmacodynamics." }
+        ]},
+        { name: "NAD+\nTrials", tip: "5 trials. Consistent NAD+ elevation but inconsistent clinical endpoints.", children: [
+          { name: "NR MCI", tip: "PMC10828186. Raised NAD+, reduced PhenoAge/GrimAge, but NO cognition change." },
+          { name: "NR Long-\nCOVID", tip: "2000mg/day, 24wk, 58 pts. Benefits demonstrated. Lancet eClinMed 2025." },
+          { name: "NADage", tip: "NCT06208527. NR for aging biomarkers. Active." }
+        ]},
+        { name: "Gene Therapy\nTrials", tip: "Nascent but accelerating. First explicit aging-targeting gene therapy trials.", children: [
+          { name: "Klotho +\nFollistatin", tip: "Combined gene therapy for healthy adults. First-in-kind for aging." },
+          { name: "Altos Labs\nHuman Safety", tip: "Reprogramming safety testing beginning August 2025." },
+          { name: "Retro Bio\nAustralia", tip: "First human trial planned by end 2025." }
+        ]}
+      ]
+    },
+    {
+      name: "Challenges\n& Future",
+      color: "#facc15",
+      tip: "Translation gaps, regulatory hurdles, safety concerns, and upcoming breakthroughs 2025-2027.",
+      children: [
+        { name: "Translation\nGaps", tip: "Robust preclinical results often fail to translate. NR, RTB101, early UBX programs.", children: [
+          { name: "NAD+ Paradox", tip: "NR/NMN reliably raise blood NAD+ but clinical benefits inconsistent across trials." },
+          { name: "RTB101\nFailure", tip: "Phase 3 PROTECTOR trial failed. mTOR inhibitor monotherapy insufficient. Stock -75%." },
+          { name: "Species\nDifferences", tip: "Mouse-to-human translation remains challenging. Dosing, timing, metabolism differ." }
+        ]},
+        { name: "Regulatory\nLandscape", tip: "FDA does not recognize 'aging' as a disease. TAME trial seeking to change this.", children: [
+          { name: "TAME as\nPrecedent", tip: "If successful, establishes first FDA pathway for 'aging' as treatable indication." },
+          { name: "ARPA-H\nFramework", tip: "Advanced Research Projects Agency for Health now coordinating aging trial infrastructure." },
+          { name: "FORZINITY\nPathway", tip: "Elamipretide approval for Barth creates template for mito-targeting drugs." }
+        ]},
+        { name: "Safety\nConcerns", tip: "Most potent interventions carry most significant risks.", children: [
+          { name: "Cancer Risk\n(Reprogramming)", tip: "c-Myc is oncogene. Even OSK carries risk if expression not precisely controlled." },
+          { name: "Immune\nSuppression", tip: "mTOR inhibitors: dose-dependent. Low-dose may enhance immunity; high-dose suppresses." },
+          { name: "Thrombo-\ncytopenia", tip: "Navitoclax: BCL-xL essential for platelets. Topical/prodrug approaches in development." }
+        ]},
+        { name: "2025-2026\nMilestones", tip: "Multiple companies entering human trials. Critical inflection point for the field.", children: [
+          { name: "Altos Labs\nHuman Data", tip: "First reprogramming safety data from human subjects expected 2025-2026." },
+          { name: "CLARITY\nResults", tip: "650 participant Urolithin A brain health trial. March 2026 completion." },
+          { name: "Life Bio\nEye Trial", tip: "Epigenetic reprogramming clinical trials for ocular aging. Early 2026." },
+          { name: "Turn Bio\nTRN-001", tip: "mRNA-based reprogramming. Clinical trial initiation targeted 2026." }
+        ]},
+        { name: "Emerging\nParadigms", tip: "Convergent mechanisms, combination approaches, and new frameworks.", children: [
+          { name: "Combination\nTherapy", tip: "Rapa+acarbose (+36.6%), D+Q synergy, Klotho+Follistatin. Multi-target optimal." },
+          { name: "GLP-1 as\nGeroprotector", tip: "Unexpected longevity candidate. Inflammation reduction may be key anti-aging mechanism." },
+          { name: "AI Drug\nDiscovery", tip: "Insilico: 100% IND success, 12-18mo turnaround. Shift Bio: AI cell simulation." },
+          { name: "Accessibility\nSpectrum", tip: "Metformin $4/mo to gene therapy $$$. Tiered longevity landscape emerging." }
+        ]}
+      ]
+    }
+  ]
+};
+
+const branchColors = {
+  "12 Hallmarks\nof Aging": "#f97316",
+  "Therapeutic\nInterventions": "#22d3ee",
+  "Biomarkers\n& Clocks": "#a78bfa",
+  "Industry &\nInvestment": "#4ade80",
+  "Clinical\nTrials": "#f472b6",
+  "Challenges\n& Future": "#facc15"
+};
+
+const width = window.innerWidth;
+const height = window.innerHeight;
+const cx = width / 2;
+const cy = height / 2;
+
+const svg = d3.select("#mindmap")
+  .append("svg")
+  .attr("width", width)
+  .attr("height", height);
+
+const g = svg.append("g")
+  .attr("transform", `translate(${cx},${cy})`);
+
+const zoom = d3.zoom()
+  .scaleExtent([0.3, 4])
+  .on("zoom", (event) => {
+    g.attr("transform", event.transform);
+  });
+
+svg.call(zoom);
+svg.call(zoom.transform, d3.zoomIdentity.translate(cx, cy).scale(0.85));
+
+const tooltip = d3.select("#tooltip");
+
+const root = d3.hierarchy(data);
+root.x0 = 0;
+root.y0 = 0;
+
+function getBranchColor(d) {
+  let node = d;
+  while (node.parent && node.parent.parent) {
+    node = node.parent;
+  }
+  return node.data.color || branchColors[node.data.name] || "#64748b";
+}
+
+function getNodeRadius(d) {
+  if (d.depth === 0) return 22;
+  if (d.depth === 1) return 12;
+  if (d.depth === 2) return 7;
+  return 5;
+}
+
+// Start with depth-2 nodes collapsed
+root.descendants().forEach(d => {
+  if (d.depth >= 2 && d.children) {
+    d._children = d.children;
+    d.children = null;
+  }
+});
+
+let i = 0;
+const duration = 500;
+
+function radialPoint(angle, radius) {
+  return [radius * Math.cos(angle - Math.PI / 2), radius * Math.sin(angle - Math.PI / 2)];
+}
+
+function update(source) {
+  const allNodes = root.descendants();
+  const visibleLeaves = allNodes.filter(d => !d.children || d.children.length === 0);
+
+  // Assign angular positions
+  let leafIndex = 0;
+  const totalLeaves = visibleLeaves.length || 1;
+
+  function assignAngles(node) {
+    if (!node.children || node.children.length === 0) {
+      node.angle = (leafIndex / totalLeaves) * 2 * Math.PI;
+      leafIndex++;
+    } else {
+      node.children.forEach(assignAngles);
+      const angles = node.children.map(c => c.angle);
+      node.angle = d3.mean(angles);
+    }
+  }
+  assignAngles(root);
+  root.angle = 0;
+
+  // Assign radial distances
+  const radiusScale = d3.scaleLinear()
+    .domain([0, 1, 2, 3])
+    .range([0, 160, 310, 430]);
+
+  allNodes.forEach(d => {
+    d.radius = radiusScale(d.depth);
+  });
+
+  const nodes = allNodes;
+  const links = root.links();
+
+  // LINKS
+  const link = g.selectAll(".link")
+    .data(links, d => d.target.data.name + d.target.depth);
+
+  const linkEnter = link.enter()
+    .append("path")
+    .attr("class", "link")
+    .attr("d", () => {
+      const o = radialPoint(source.angle || 0, source.radius || 0);
+      return `M${o[0]},${o[1]}L${o[0]},${o[1]}`;
+    })
+    .attr("stroke", d => getBranchColor(d.target));
+
+  link.merge(linkEnter)
+    .transition()
+    .duration(duration)
+    .attr("d", d => {
+      const s = radialPoint(d.source.angle, d.source.radius);
+      const t = radialPoint(d.target.angle, d.target.radius);
+      const midR = (d.source.radius + d.target.radius) / 2;
+      const midAngle = (d.source.angle + d.target.angle) / 2;
+      const ctrl = radialPoint(midAngle, midR);
+      return `M${s[0]},${s[1]}Q${ctrl[0]},${ctrl[1]} ${t[0]},${t[1]}`;
+    })
+    .attr("stroke-opacity", 0.35);
+
+  link.exit()
+    .transition()
+    .duration(duration)
+    .attr("d", () => {
+      const o = radialPoint(source.angle || 0, source.radius || 0);
+      return `M${o[0]},${o[1]}L${o[0]},${o[1]}`;
+    })
+    .remove();
+
+  // NODES
+  const node = g.selectAll(".node")
+    .data(nodes, d => d.id || (d.id = ++i));
+
+  const nodeEnter = node.enter()
+    .append("g")
+    .attr("class", "node")
+    .attr("transform", () => {
+      const p = radialPoint(source.angle || 0, source.radius || 0);
+      return `translate(${p[0]},${p[1]})`;
+    })
+    .on("click", (event, d) => {
+      if (d.depth === 0) return;
+      if (d.children) {
+        d._children = d.children;
+        d.children = null;
+      } else if (d._children) {
+        d.children = d._children;
+        d._children = null;
+      }
+      update(d);
+    })
+    .on("mouseover", (event, d) => {
+      if (d.data.tip) {
+        const ttTitle = d.data.name.replace(/\n/g, " ");
+        tooltip.html(`<div class="tt-title">${ttTitle}</div><div class="tt-detail">${d.data.tip}</div>`)
+          .style("left", (event.pageX + 14) + "px")
+          .style("top", (event.pageY - 14) + "px")
+          .style("opacity", 1);
+      }
+    })
+    .on("mousemove", (event) => {
+      tooltip.style("left", (event.pageX + 14) + "px")
+        .style("top", (event.pageY - 14) + "px");
+    })
+    .on("mouseout", () => {
+      tooltip.style("opacity", 0);
+    });
+
+  nodeEnter.append("circle")
+    .attr("r", 0)
+    .attr("fill", d => {
+      if (d.depth === 0) return "#1e293b";
+      const color = getBranchColor(d);
+      return d._children ? color : (d.children ? d3.color(color).darker(0.3) : d3.color(color).darker(1));
+    })
+    .attr("stroke", d => {
+      if (d.depth === 0) return "#60a5fa";
+      return getBranchColor(d);
+    });
+
+  nodeEnter.append("text")
+    .attr("dy", d => {
+      if (d.depth === 0) return "0.35em";
+      const r = getNodeRadius(d);
+      return d.angle > Math.PI ? -(r + 6) : (r + 14);
+    })
+    .attr("text-anchor", "middle")
+    .style("font-size", d => {
+      if (d.depth === 0) return "14px";
+      if (d.depth === 1) return "12px";
+      if (d.depth === 2) return "10.5px";
+      return "9.5px";
+    })
+    .style("font-weight", d => d.depth <= 1 ? "600" : "400")
+    .each(function(d) {
+      const lines = d.data.name.split("\n");
+      const el = d3.select(this);
+      el.text("");
+      lines.forEach((line, idx) => {
+        el.append("tspan")
+          .attr("x", 0)
+          .attr("dy", idx === 0 ? "0em" : "1.15em")
+          .text(line);
+      });
+    });
+
+  // Update
+  const nodeUpdate = node.merge(nodeEnter);
+
+  nodeUpdate.transition()
+    .duration(duration)
+    .attr("transform", d => {
+      const p = radialPoint(d.angle, d.radius);
+      return `translate(${p[0]},${p[1]})`;
+    });
+
+  nodeUpdate.select("circle")
+    .transition()
+    .duration(duration)
+    .attr("r", d => getNodeRadius(d))
+    .attr("fill", d => {
+      if (d.depth === 0) return "#1e293b";
+      const color = getBranchColor(d);
+      return d._children ? color : (d.children ? d3.color(color).darker(0.3) : d3.color(color).darker(1));
+    })
+    .attr("stroke", d => {
+      if (d.depth === 0) return "#60a5fa";
+      return getBranchColor(d);
+    });
+
+  // Update text positioning
+  nodeUpdate.select("text")
+    .transition()
+    .duration(duration)
+    .attr("dy", function(d) {
+      if (d.depth === 0) return "0.35em";
+      const r = getNodeRadius(d);
+      return d.angle > Math.PI ? -(r + 6) : (r + 14);
+    });
+
+  // Exit
+  const nodeExit = node.exit()
+    .transition()
+    .duration(duration)
+    .attr("transform", () => {
+      const p = radialPoint(source.angle || 0, source.radius || 0);
+      return `translate(${p[0]},${p[1]})`;
+    })
+    .remove();
+
+  nodeExit.select("circle").attr("r", 0);
+  nodeExit.select("text").style("opacity", 0);
+
+  // Store positions for transitions
+  nodes.forEach(d => {
+    d.angle0 = d.angle;
+    d.radius0 = d.radius;
+  });
+}
+
+update(root);
+
+// Controls
+function expandAll() {
+  root.descendants().forEach(d => {
+    if (d._children) {
+      d.children = d._children;
+      d._children = null;
+    }
+  });
+  update(root);
+}
+
+function collapseAll() {
+  root.descendants().forEach(d => {
+    if (d.depth >= 2 && d.children) {
+      d._children = d.children;
+      d.children = null;
+    }
+  });
+  update(root);
+}
+
+function resetZoom() {
+  svg.transition()
+    .duration(500)
+    .call(zoom.transform, d3.zoomIdentity.translate(cx, cy).scale(0.85));
+}
+
+// Handle resize
+window.addEventListener("resize", () => {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  svg.attr("width", w).attr("height", h);
+  svg.call(zoom.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(0.85));
+});
+</script>
+</body>
+</html>
